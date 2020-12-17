@@ -1,0 +1,7 @@
+VNect pose estimation module (Tensorflow implementation)
+
+Original paper: http://gvv.mpi-inf.mpg.de/projects/VNect/
+Borrowed code from these authors / projects:
+https://github.com/timctho/VNect-tensorflow
+https://github.com/EJShim
+https://github.com/XinArkh/VNect
