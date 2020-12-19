@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from pose_playground.pose_models.model_managed import ModelManaged
 from pose_playground.joint_angle import Joints2Angles
-from pose_playground.utils.visualise import drawLimbs2dOnCV2Image
+from pose_playground.utils.visualise import drawLimbs2dOnCV2Image, drawRectangle
 
 try:
     os.mkdir('video_results/')
@@ -53,13 +53,16 @@ while P_succeed and G_succeed and h_succeed:
     h_angle_list.append(h_j2angle(h_joints_3d, time_delta=1/30) / np.pi)
 
     
-    x, y, _, _ = P_pose_model.last_estimate_rectangle
+    x, y, w, h = P_pose_model.last_estimate_rectangle
+    drawRectangle(P_frame, (x, y, w, h))
     drawLimbs2dOnCV2Image(P_frame, P_joints_2d, P_pose_model.joint_parents, 'video_results/P_' + str(frame_count) + '.jpg', x=x, y=y)
 
-    x, y, _, _ = G_pose_model.last_estimate_rectangle
+    x, y, w, h = G_pose_model.last_estimate_rectangle
+    drawRectangle(G_frame, (x, y, w, h))
     drawLimbs2dOnCV2Image(G_frame, G_joints_2d, G_pose_model.joint_parents, 'video_results/G_' + str(frame_count) + '.jpg', x=x, y=y)
 
-    x, y, _, _ = h_pose_model.last_estimate_rectangle
+    x, y, w, h = h_pose_model.last_estimate_rectangle
+    drawRectangle(h_frame, (x, y, w, h))
     drawLimbs2dOnCV2Image(h_frame, h_joints_2d, h_pose_model.joint_parents, 'video_results/h_' + str(frame_count) + '.jpg', x=x, y=y)
     
     frame_count += 1
