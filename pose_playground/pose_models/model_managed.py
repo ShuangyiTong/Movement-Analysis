@@ -1,6 +1,7 @@
 import cv2
 
 from pose_playground.pose_models.VNect.estimator import VNectEstimator
+from pose_playground.pose_models.VideoPose3D.estimator import VideoPose3DEstimator
 from pose_playground.utils.hog_human import HOGHuman
 
 class ModelManaged:
@@ -38,6 +39,9 @@ class ModelManaged:
         
             if hog_box:
                 self.hog = HOGHuman()
+        elif model_type == 'VideoPose3D':
+            self.model_instance = VideoPose3DEstimator(causal=kwargs['causal'])
+            self.num_joints = self.model_instance.num_joints
         else:
             raise NotImplementedError(model_type + ' unrecognised')
 
