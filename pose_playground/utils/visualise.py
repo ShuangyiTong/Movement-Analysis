@@ -26,6 +26,7 @@ def drawLimbs3d(joints_3d, joint_parents, save_figure=None):
         ax_3d.plot(x_pair, y_pair, zs=z_pair, linewidth=3)
     if save_figure:
         plt.savefig(save_figure)
+        plt.close(fig)
     else:
         plt.show()
 
@@ -39,20 +40,12 @@ def drawLimbs2dCV2(img_to_draw, joints_2d_copy, limb_parents, save_figure, x=0, 
     joints_2d[:, 0] += y
     joints_2d[:, 1] += x
     colour_map = [(239,65,54), (247,148,29), (251,176,64), (249,237,50), (0,174,239)]
-    # draw skeleton
-    for limb_num in range(len(limb_parents)):
-        x1 = joints_2d[limb_num, 0]
-        y1 = joints_2d[limb_num, 1]
-        x2 = joints_2d[limb_parents[limb_num], 0]
-        y2 = joints_2d[limb_parents[limb_num], 1]
-        length = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
-        deg = math.degrees(math.atan2(x1 - x2, y1 - y2))
-        # here round() returns float type, so use int() to convert it to integer type
-        polygon = cv2.ellipse2Poly((int(round((y1+y2)/2)), int(round((x1+x2)/2))),
-                                   (int(length/2), 3),
-                                   int(deg),
-                                   0, 360, 1)
-        img = cv2.fillConvexPoly(img, polygon, color=rgb2bgr(colour_map[limb_num % len(colour_map)]))
+    for joint_id, joint in enumerate(joints_2d):
+        cv2.circle(img, (joint[0], joint[1]), 5, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
+        if limb_parents:
+            cv2.line(img, (joint[0], joint[1]), 
+                    (joints_2d[limb_parents[joint_id]][0], joints_2d[limb_parents[joint_id]][1]),
+                    colour_map[joint_id % len(colour_map)], 2)
 
     return img
     

@@ -12,7 +12,7 @@ class OpenPose2DEstimator:
         self.net = OpenPoseCoco(os.path.join(this_file_path, '../../model_data/openpose_coco_weights.pkl'))
         
         if data_format == 'coco':
-            self.num_joints = 17
+            self.num_output_joints = 18
         else:
             raise ValueError('Unrecognised data format: ' + data_format)
 
@@ -32,9 +32,9 @@ class OpenPose2DEstimator:
         out_tensor = self.net(img_tensor)
         H = out_tensor.shape[2]
         W = out_tensor.shape[3]
-        np_res = out_tensor.detach().cpu().numpy()
-        kps = np.zeros((self.num_joints), 2)
-        for i in range(self.num_joints):
+        np_res = out_tensor.cpu().detach().numpy()
+        kps = np.zeros((self.num_output_joints, 2), dtype=np.float32)
+        for i in range(self.num_output_joints):
             img_prob_map = np_res[0, i, :, :]
             _, _, _, point = cv2.minMaxLoc(img_prob_map)
 

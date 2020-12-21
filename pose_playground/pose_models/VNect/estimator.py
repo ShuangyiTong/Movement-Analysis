@@ -12,17 +12,17 @@ class VNectEstimator:
     box_size = 368
     # the input box size is 8 times the side length of the output heatmaps
     hm_factor = 8
-    # sum of the joints to be detected
-    joints_sum = 21
-    # parent joint indexes of each joint (for plotting the skeletal lines)
-    joint_parents = [16, 15, 1, 2, 3, 1, 5, 6, 14, 8, 9, 14, 11, 12, 14, 14, 1, 4, 7, 10, 13]
-    # joint names by index
-    joint_names = ['head_top', 'neck', 'right_shoulder', 'right_elbow', 'right_wrist', 'left_shoulder', 'left_elbow',
-                   'left_wrist', 'right_hip', 'right_knee', 'right_ankle', 'left_hip', 'left_knee', 'left_ankle',
-                   'pelvis', 'spine', 'head', 'right_hand', 'left_hand', 'right_toe', 'left_toe']
 
     def __init__(self, existing_sess=None):
         print('Initializing VNect Estimator...')
+        # sum of the joints to be detected
+        self.num_output_joints = 21
+        # parent joint indexes of each joint (for plotting the skeletal lines)
+        self.joint_parents = [16, 15, 1, 2, 3, 1, 5, 6, 14, 8, 9, 14, 11, 12, 14, 14, 1, 4, 7, 10, 13]
+        # joint names by index
+        self.joint_names = ['head_top', 'neck', 'right_shoulder', 'right_elbow', 'right_wrist', 'left_shoulder', 'left_elbow',
+                            'left_wrist', 'right_hip', 'right_knee', 'right_ankle', 'left_hip', 'left_knee', 'left_ankle',
+                            'pelvis', 'spine', 'head', 'right_hand', 'left_hand', 'right_toe', 'left_toe']
         # the scale factors to zoom down the input image crops
         # put different scales to get better average performance
         # for faster loops, use less scales e.g. [1], [1, 0.7]

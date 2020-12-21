@@ -1,7 +1,8 @@
+import sys
+import os
 import cv2
+import numpy as np
 
-from pose_playground.pose_models.VNect.estimator import VNectEstimator
-from pose_playground.pose_models.VideoPose3D.estimator import VideoPose3DEstimator
 from pose_playground.utils.hog_human import HOGHuman
 
 class ModelManaged:
@@ -24,13 +25,13 @@ class ModelManaged:
         self.model_type = model_type
         self.hog = None
         if model_type == 'VNect':
+            if 'pose_playground.pose_models.VNect.estimator' not in sys.modules: 
+                from pose_playground.pose_models.VNect.estimator import VNectEstimator
+
             if 'use_sess' in kwargs.keys():
                 self.model_instance = VNectEstimator(existing_sess=kwargs['use_sess'])
             else:
                 self.model_instance = VNectEstimator()
-            self.num_joints = VNectEstimator.joints_sum
-            self.joint_parents = VNectEstimator.joint_parents
-            self.joint_names = VNectEstimator.joint_names
             self.sess = self.model_instance.sess
 
             hog_box = False
@@ -39,11 +40,19 @@ class ModelManaged:
         
             if hog_box:
                 self.hog = HOGHuman()
+            
+            self.causal = True
         elif model_type == 'VideoPose3D':
-            self.model_instance = VideoPose3DEstimator(causal=kwargs['causal'])
-            self.num_joints = self.model_instance.num_joints
+            if 'pose_playground.pose_models.VideoPose3D.estimator' not in sys.modules:
+                from pose_playground.pose_models.VideoPose3D.estimator import VideoPose3DEstimator
+            self.causal = kwargs['causal']
+            self.model_instance = VideoPose3DEstimator(self.causal)
         else:
             raise NotImplementedError(model_type + ' unrecognised')
+
+        self.num_joints = self.model_instance.num_output_joints
+        self.joint_parents = self.model_instance.joint_parents
+        self.joint_names = self.model_instance.joint_names
 
     def estimateFromImage(self, image_file, time_delta=None):
         '''Args:
@@ -67,6 +76,58 @@ class ModelManaged:
         img_cropped = img[y:y + h, x:x + w, :]
         joints_2d, joints_3d = self.model_instance(img_cropped, time_delta)
         return joints_2d, joints_3d
+
+    def estimateFromVideo(self, video_name, interval=None, resize=1):
+        video = cv2.VideoCapture(video_name)
+        succeed, frame = video.read()
+        frame_time = 1 / video.get(cv2.CAP_PROP_FPS)
+
+        if self.causal:
+            joints_2ds = np.zeros((0, self.num_joints, 2), dtype=int)
+            joints_3ds = np.zeros((0, self.num_joints, 3), dtype=np.float32)
+        else:
+            intermediate_inputs = self.model_instance.getIntermediateInputTemplate()
+        bounding_boxes = []
+        frames = []
+        while succeed:
+            if interval:
+                # filter time range of the video
+                if video.get(cv2.CAP_PROP_POS_MSEC) < interval[0]:
+                    succeed, frame = video.read()
+                    continue
+                elif video.get(cv2.CAP_PROP_POS_MSEC) > interval[1]:
+                    break
+
+            if resize != 1:
+                frame = cv2.resize(frame, (int(frame.shape[1] * resize), int(frame.shape[0] * resize)))
+
+            if self.hog:
+                x, y, w, h = self.hog(frame)
+            else:
+                x, y = 0, 0
+                h, w = frame.shape[:2]
+
+            frames.append(frame)
+            bounding_boxes.append((x, y, w, h))
+            print('Processing frame:', len(frames))
+            frame_cropped = frame[y:y + h, x:x + w, :]
+
+            if self.causal:
+                joints_2d, joints_3d = self.model_instance(frame_cropped, frame_time)
+                joints_2ds = np.append(joints_2ds, np.expand_dims(joints_2d, axis=0), axis=0)
+                joints_3ds = np.append(joints_3ds, np.expand_dims(joints_3d, axis=0), axis=0)
+            else:
+                intermediate_input = self.model_instance.getIntermediateInput(frame_cropped, frame_time)
+                intermediate_inputs = np.append(intermediate_inputs, intermediate_input, axis=0)
+            
+            succeed, frame = video.read()
+
+        if not self.causal:
+            joints_2ds, joints_3ds = self.model_instance.batchInput(intermediate_inputs, w=w, h=h)
+        else:
+            joints_2ds = joints_2ds.astype(int)
+
+        return joints_2ds, joints_3ds, frames, bounding_boxes
 
     def getJointIndexByName(self, joint_name):
         try:
