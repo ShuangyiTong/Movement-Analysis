@@ -25,8 +25,7 @@ class ModelManaged:
         self.model_type = model_type
         self.hog = None
         if model_type == 'VNect':
-            if 'pose_playground.pose_models.VNect.estimator' not in sys.modules: 
-                from pose_playground.pose_models.VNect.estimator import VNectEstimator
+            from pose_playground.pose_models.VNect.estimator import VNectEstimator
 
             if 'use_sess' in kwargs.keys():
                 self.model_instance = VNectEstimator(existing_sess=kwargs['use_sess'])
@@ -43,10 +42,13 @@ class ModelManaged:
             
             self.causal = True
         elif model_type == 'VideoPose3D':
-            if 'pose_playground.pose_models.VideoPose3D.estimator' not in sys.modules:
-                from pose_playground.pose_models.VideoPose3D.estimator import VideoPose3DEstimator
+            from pose_playground.pose_models.VideoPose3D.estimator import VideoPose3DEstimator
+            
             self.causal = kwargs['causal']
-            self.model_instance = VideoPose3DEstimator(self.causal)
+            if 'backend' in kwargs.keys():
+                self.model_instance = VideoPose3DEstimator(self.causal, backend=kwargs['backend'])
+            else:
+                self.model_instance = VideoPose3DEstimator(self.causal)
         else:
             raise NotImplementedError(model_type + ' unrecognised')
 
@@ -83,10 +85,10 @@ class ModelManaged:
         frame_time = 1 / video.get(cv2.CAP_PROP_FPS)
 
         if self.causal:
-            joints_2ds = np.zeros((0, self.num_joints, 2), dtype=int)
-            joints_3ds = np.zeros((0, self.num_joints, 3), dtype=np.float32)
+            joints_2ds = []
+            joints_3ds = []
         else:
-            intermediate_inputs = self.model_instance.getIntermediateInputTemplate()
+            intermediate_inputs = []
         bounding_boxes = []
         frames = []
         while succeed:
@@ -114,18 +116,18 @@ class ModelManaged:
 
             if self.causal:
                 joints_2d, joints_3d = self.model_instance(frame_cropped, frame_time)
-                joints_2ds = np.append(joints_2ds, np.expand_dims(joints_2d, axis=0), axis=0)
-                joints_3ds = np.append(joints_3ds, np.expand_dims(joints_3d, axis=0), axis=0)
+                joints_2ds.append(joints_2d)
+                joints_3ds.append(joints_3d)
             else:
                 intermediate_input = self.model_instance.getIntermediateInput(frame_cropped, frame_time)
-                intermediate_inputs = np.append(intermediate_inputs, intermediate_input, axis=0)
-            
+                intermediate_inputs.append(intermediate_input)
             succeed, frame = video.read()
 
         if not self.causal:
-            joints_2ds, joints_3ds = self.model_instance.batchInput(intermediate_inputs, w=w, h=h)
+            joints_2ds, joints_3ds = self.model_instance.batchInput(np.array(intermediate_inputs),
+                                                                    w=w, h=h)
         else:
-            joints_2ds = joints_2ds.astype(int)
+            joints_2ds = np.array(joints_2ds).astype(int)
 
         return joints_2ds, joints_3ds, frames, bounding_boxes
 

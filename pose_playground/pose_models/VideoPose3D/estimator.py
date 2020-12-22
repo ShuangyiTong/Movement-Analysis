@@ -5,10 +5,18 @@ import numpy as np
 from pose_playground.pose_models.VideoPose3D.net_coco2human36m import TemporalModel
 from pose_playground.pose_models.OpenPose.estimator import OpenPose2DEstimator
 from pose_playground.pose_models.VideoPose3D.utils import normalizeScreenCoordinates
+from pose_playground.pose_models.VideoPose3D.utils import getDetectron2Predictor
+from pose_playground.pose_models.VideoPose3D.utils import detectronOutput2Keypoints
 
 class VideoPose3DEstimator:
-    def __init__(self, causal):
-        self.coco_2d_estimator = OpenPose2DEstimator(data_format='coco')
+    def __init__(self, causal, backend='openpose'):
+        if backend == 'openpose':
+            self.coco_2d_estimator = OpenPose2DEstimator(data_format='coco')
+        elif backend == 'detectron':
+            self.detectron_predictor = getDetectron2Predictor()
+        else:
+            raise NotImplementedError('Only openpose and detectron backend currently supported')
+        self.backend = backend
         self.causal = causal
 
         # human3.6m joints config
@@ -33,7 +41,7 @@ class VideoPose3DEstimator:
         self.net.eval()
         torch.no_grad()
 
-        self.has_cuda = self.coco_2d_estimator.has_cuda
+        self.has_cuda = torch.cuda.is_available()
         if self.has_cuda:
             self.net.cuda()
 
@@ -65,14 +73,33 @@ class VideoPose3DEstimator:
 
         return relocated_joints
 
+    def get2DInput(self, img_input, time_delta=None):
+        if self.backend == 'openpose':
+            joints_2d = self.coco_2d_estimator(img_input, time_delta=time_delta)
+            joints_2d = self.Coco18to17(joints_2d)
+            return joints_2d
+        elif self.backend == 'detectron':
+            outputs = self.detectron_predictor(img_input)['instances'].to('cpu')
+            keypoints = detectronOutput2Keypoints(outputs)
+            return keypoints
+        else:
+            raise NotImplementedError
+
     def getIntermediateInputTemplate(self):
-        return np.zeros((0, 17, 2), dtype=np.float32)
+        if self.backend == 'openpose':
+            return np.zeros((0, 17, 2), dtype=np.float32)
+        elif self.backend == 'detectron':
+            return []
+        else:
+            raise NotImplementedError
 
     def getIntermediateInput(self, img_input, time_delta=None):
-        joints_2d = self.coco_2d_estimator(img_input, time_delta=time_delta)
-        joints_2d = self.Coco18to17(joints_2d)
-        joints_2d = np.expand_dims(joints_2d, axis=0)
-        return joints_2d
+        intermediate_input = self.get2DInput(img_input, time_delta)
+        if self.backend == 'detectron':
+            return intermediate_input
+        else:
+            intermediate_input = np.expand_dims(intermediate_input, axis=0)
+        return intermediate_input
     
     def prepInputs(self, joints_2d_input):
         input_2d = np.expand_dims(np.pad(joints_2d_input,
@@ -98,8 +125,7 @@ class VideoPose3DEstimator:
         return joints_3d_output
     
     def __call__(self, img_input, time_delta=None):
-        joints_2d = self.coco_2d_estimator(img_input, time_delta=time_delta)
-        joints_2d = self.Coco18to17(joints_2d)
+        joints_2d = self.get2DInput(img_input, time_delta)
         output_joints_2d = joints_2d.astype(int)
         joints_2d = np.expand_dims(joints_2d, axis=0)
         joints_2d[..., :2] = normalizeScreenCoordinates(joints_2d[..., :2], img_input.shape[1], img_input.shape[0])
@@ -122,6 +148,15 @@ class VideoPose3DEstimator:
     def batchInput(self, joints_2ds, w=None, h=None):
         assert w
         assert h
+        print(joints_2ds.shape)
+        if self.backend == 'detectron':
+            # performing interpolation
+            mask = ~np.isnan(joints_2ds[:, 0, 0])
+            indices = np.arange(len(joints_2ds))
+            for i in range(17):
+                for j in range(2):
+                    joints_2ds[:, i, j] = np.interp(indices, indices[mask], joints_2ds[mask, i, j])
+
         output_joints_2ds = joints_2ds.copy()
         joints_2ds[..., :2] = normalizeScreenCoordinates(joints_2ds[..., :2], w, h)
         input_2d = self.prepInputs(joints_2ds)
