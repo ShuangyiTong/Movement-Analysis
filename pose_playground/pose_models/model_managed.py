@@ -128,6 +128,7 @@ class ModelManaged:
                                                                     w=w, h=h)
         else:
             joints_2ds = np.array(joints_2ds).astype(int)
+            joints_3ds = np.array(joints_3ds)
 
         return joints_2ds, joints_3ds, frames, bounding_boxes
 
