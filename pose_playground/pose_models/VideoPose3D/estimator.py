@@ -95,10 +95,6 @@ class VideoPose3DEstimator:
 
     def getIntermediateInput(self, img_input, time_delta=None):
         intermediate_input = self.get2DInput(img_input, time_delta)
-        if self.backend == 'detectron':
-            return intermediate_input
-        else:
-            intermediate_input = np.expand_dims(intermediate_input, axis=0)
         return intermediate_input
     
     def prepInputs(self, joints_2d_input):
@@ -148,7 +144,7 @@ class VideoPose3DEstimator:
     def batchInput(self, joints_2ds, w=None, h=None):
         assert w
         assert h
-        print(joints_2ds.shape)
+
         if self.backend == 'detectron':
             # performing interpolation
             mask = ~np.isnan(joints_2ds[:, 0, 0])

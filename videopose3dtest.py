@@ -16,5 +16,5 @@ for i, frame in enumerate(frames):
         os.mkdir('Healthy_Trim_results/')
     except FileExistsError:
         pass
-    drawLimbs2dOnCV2Image(frame, joints_2ds[i], None, save_figure='Healthy_Trim_results/2d_' + str(i) + '.jpg')
-    drawLimbs3d(joints_3ds[i], vp3d_model.joint_parents, save_figure='Healthy_Trim_results/3d_' + str(i) + '.jpg')
+    drawLimbs2dOnCV2Image(frame, joints_2ds[i], None, save_figure='Healthy_Trim_results/2d_' + str(i).zfill(5) + '.jpg')
+    drawLimbs3d(joints_3ds[i], vp3d_model.joint_parents, save_figure='Healthy_Trim_results/3d_' + str(i).zfill(5) + '.jpg')
