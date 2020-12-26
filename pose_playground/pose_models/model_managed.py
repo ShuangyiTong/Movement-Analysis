@@ -111,7 +111,7 @@ class ModelManaged:
 
             frames.append(frame)
             bounding_boxes.append((x, y, w, h))
-            print('Processing frame:', len(frames))
+            print('Processing frame:', len(frames), 'timestamp (ms):', video.get(cv2.CAP_PROP_POS_MSEC))
             frame_cropped = frame[y:y + h, x:x + w, :]
 
             if self.causal:
@@ -128,6 +128,7 @@ class ModelManaged:
                                                                     w=w, h=h)
         else:
             joints_2ds = np.array(joints_2ds).astype(int)
+            joints_3ds = np.array(joints_3ds)
 
         return joints_2ds, joints_3ds, frames, bounding_boxes
 

@@ -22,7 +22,7 @@ class VideoPose3DEstimator:
         # human3.6m joints config
         self.num_output_joints = 17
         self.joint_parents = [7, 0, 1, 2, 0, 4, 5, 0, 7, 8, 9, 8, 11, 12, 8, 14, 15]
-        self.joint_names = ['pelvis', 'left_hip', 'left_knee', 'left_foot', 'right_hip', 'right_knee', 'right_food',
+        self.joint_names = ['pelvis', 'left_hip', 'left_knee', 'left_foot', 'right_hip', 'right_knee', 'right_foot',
                             'spine', 'upper_torso', 'neck_base', 'head', 'right_shoulder', 'right_elbow', 'right_hand',
                             'left_shoulder', 'left_elbow', 'left_hand']
 
