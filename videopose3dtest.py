@@ -1,10 +1,11 @@
+  
 import os
 import numpy as np
 
 from pose_playground.utils.visualise import drawLimbs3d, drawLimbs2dOnCV2Image
 from pose_playground.pose_models.model_managed import ModelManaged
 
-vp3d_model = ModelManaged('VideoPose3D', causal=True, backend='detectron')
+vp3d_model = ModelManaged('VideoPose3D', causal=False, backend='detectron')
 
 joints_2ds, joints_3ds, frames, bboxes = vp3d_model.estimateFromVideo('Healthy_Trim.mp4', resize=1)
 print(joints_2ds.shape)
